@@ -1,6 +1,7 @@
 import socket
 import sys
 
+stored_data_file = open("serverDB/data_from_client.txt","w")
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server_address = ('localhost',4000)
@@ -15,13 +16,17 @@ while True:
     try:
         print >>sys.stderr,'connection from', client_address
         while True:
-            data = connection.recv(16)
+            data = connection.recv(1000)
             print >>sys.stderr,'received "%s"' % data
             if data:
                 print >>sys.stderr, 'sending data back to the client'
-                connection.sendall(data)
+                connection.sendall("all data received")
+                stored_data_file.write(data)
             else:
+                print >>sys.stderr, 'sending data back to the client'
+                connection.sendall("all data received")
                 print >>sys.stderr, 'no more data from', client_address
                 break
     finally:
+
         connection.close()

@@ -2,58 +2,6 @@ import socket, sys, random, hmac, hashlib, binascii, os
 import textwrap
 import pyaes.aes as pyaes
 
-def comunication():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = ('localhost', 4000)
-    print >>sys.stderr, 'connection to %s port %s' % server_address
-    sock.connect(server_address)
-    try:
-        message = 'Message 1.'
-        print >>sys.stderr, 'connecting to %s port %s' %server_address
-        sock.sendall(message)
-
-        amount_received = 0
-        amount_expected = len(message)
-
-        while amount_received < amount_expected:
-            data = sock.recv(16)
-            amount_received += len(data)
-            print >> sys.stderr, 'received "%s"' % data
-    finally:
-        print >>sys.stderr, 'closing socket'
-        sock.close()
-
-
-def randomBinaryKey(k):
-    key = ""
-    for i in range(k):
-        if random.random() < 0.5:
-            key = key+"0"
-        else:
-            key = key+"1"
-        key_256 = os.urandom(k/8)
-        return key_256
-
-#Pseudo-random Function
-def prf(x,key):
-
-    return 0
-
-def permutation_iter(r, kx):
-
-    aux = []
-    for it in xrange(r):
-        aux.append(it)
-
-    print aux
-    aes = pyaes.AES(kx)
-    permuted_array = aes.encrypt(aux)
-
-    return permuted_array
-
-
-def getToken(cx,kx):
-    return
 
 # k-> n bits of keis
 #c ?
@@ -72,25 +20,85 @@ r = int(sys.argv[3])
 nB = int(sys.argv[4])
 d = sys.argv[5]
 
-wKey = randomBinaryKey(k)
-zKey = randomBinaryKey(k)
-kKey = randomBinaryKey(k)
-
 data = open("data/"+d, "r").read()
 
 
 size_piece = len(data)//nB
 splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
-print splited_data
+#print splited_data
 
-for x in xrange(1,t):
+
+def randomBinaryKey(k):
+    key = ""
+    for i in range(k):
+        if random.random() < 0.5:
+            key = key+"0"
+        else:
+            key = key+"1"
+
+    key = "%32X" % int(key,2)
+
+    return key
+
+
+class keys:
+    w = randomBinaryKey(k)
+    z = randomBinaryKey(k)
+    k = randomBinaryKey(k)
+
+class dataToSend:
+    saved_data = data
+    token_array = []
+
+
+def permutation_iter(r, kx):
+
+    aux = []
+    for it in xrange(r):
+        aux.append(it)
+
+    #print aux
+    aes = pyaes.AES(kx)
+    permuted_array = aes.encrypt(aux)
+
+    return permuted_array
+
+def prepare_data_to_send(x,new_vx):
+
+    class store:
+        i = x
+        vi = new_vx
+    dataToSend.token_array.append(store)
+
+def sendDataToServer(obj):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = ('localhost', 4000)
+    print >>sys.stderr, 'connection to %s port %s' % server_address
+    sock.connect(server_address)
+    try:
+        message = obj.saved_data
+        sock.sendall(message)
+
+        amount_received = 0
+        amount_expected = len(message)
+
+        while amount_received < 1:
+            data = sock.recv(1000)
+            amount_received += 1
+            print >> sys.stderr, 'received "%s"' % data
+    finally:
+        print >>sys.stderr, 'closing socket'
+        sock.close()
+
+
+for x in xrange(1,t+1):
     #generate kx = fw(x)
-    kx = hmac.new(wKey)
+    kx = hmac.new(keys.w)
     kx.update(str(x))
     kx = kx.hexdigest()
 
     #generate cx = fz(x)
-    cx = hmac.new(zKey)
+    cx = hmac.new(keys.z)
     cx.update(str(x))
     cx = cx.hexdigest()
 
@@ -106,38 +114,23 @@ for x in xrange(1,t):
         inputKey += format(splited_data[j%nB].encode("hex"))
         modulo_arr.append(j%nB)
 
-    print modulo_arr
-    #print inputKey
+    #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
     vx = hashlib.sha256()
     vx.update(inputKey)
     vx = vx.hexdigest()
 
-    print vx
-
-    print len(kx)
-    print len(kKey)
-
-    aes = pyaes.AESModeOfOperationCTR(kKey)
+    #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
+    aes = pyaes.AESModeOfOperationCTR(keys.z)
     encrypted_vx = aes.encrypt(str(x)+vx)
-    print "at start vx -> " + str(x)+vx
-    print "encripted -> " + encrypted_vx
-    #aes = pyaes.AESModeOfOperationCTR(kKey)
-    #print "decripted -> " + aes.decrypt(encrypted_vx)
-    new_vx = hmac.new(kKey)
+    new_vx = hmac.new(keys.z)
     new_vx.update(encrypted_vx)
     new_vx = encrypted_vx + new_vx.hexdigest()
 
-    print new_vx
-
-#class keys:
-#    w = wKey
-#    z = zKey
-#    k = kKey
-#print lib.w
+    prepare_data_to_send(x,new_vx)
 
 
-print "wKey: " + wKey
-print "zKey: " + zKey
-print "kKey: " + kKey
+sendDataToServer(dataToSend)
 
-#comunication()
+print "wKey: " + keys.w
+print "zKey: " + keys.z
+print "kKey: " + keys.k
