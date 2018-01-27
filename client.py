@@ -1,4 +1,4 @@
-import socket, sys, random, hmac, hashlib, binascii, os
+import socket, sys, random, hmac, hashlib, binascii, os,json
 import textwrap
 import pyaes.aes as pyaes
 
@@ -21,7 +21,6 @@ nB = int(sys.argv[4])
 d = sys.argv[5]
 
 data = open("data/"+d, "r").read()
-
 
 size_piece = len(data)//nB
 splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
@@ -47,8 +46,27 @@ class keys:
     k = randomBinaryKey(k)
 
 class dataToSend:
-    saved_data = data
+    saved_data = False
     token_array = []
+    def __init__(self, load_object=False):
+        if load_object:
+            saved_data = load_object["data"]
+            token_array = load_object["tokens"]
+    def toJson(self):
+        return {
+            "data": self.saved_data,
+            "tokens": self.token_array
+        }
+
+
+class element:
+    i = 0
+    vi = 0
+    def toJson(self):
+        return{
+            "i": self.i,
+            "vi": self.vi
+        }
 
 
 def permutation_iter(r, kx):
@@ -63,20 +81,25 @@ def permutation_iter(r, kx):
 
     return permuted_array
 
-def prepare_data_to_send(x,new_vx):
 
-    class store:
-        i = x
-        vi = new_vx
-    dataToSend.token_array.append(store)
+def prepare_data_to_send(dataBlock,x,new_vx):
+    new_element = element()
+    new_element.i = x
+    new_element.vi = new_vx
+    dataBlock.token_array.append(new_element.toJson())
+
 
 def sendDataToServer(obj):
+    print obj.toJson()
+    #codificar de otra forma... error en dumps utf-8
+    data_string = json.dumps(obj.toJson())
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = ('localhost', 4000)
     print >>sys.stderr, 'connection to %s port %s' % server_address
     sock.connect(server_address)
     try:
-        message = obj.saved_data
+        message = data_string
         sock.sendall(message)
 
         amount_received = 0
@@ -91,6 +114,8 @@ def sendDataToServer(obj):
         sock.close()
 
 
+dataBlock = dataToSend()
+dataBlock.saved_data = data
 for x in xrange(1,t+1):
     #generate kx = fw(x)
     kx = hmac.new(keys.w)
@@ -126,10 +151,10 @@ for x in xrange(1,t+1):
     new_vx.update(encrypted_vx)
     new_vx = encrypted_vx + new_vx.hexdigest()
 
-    prepare_data_to_send(x,new_vx)
+    prepare_data_to_send(dataBlock,x,new_vx)
 
 
-sendDataToServer(dataToSend)
+sendDataToServer(dataBlock)
 
 print "wKey: " + keys.w
 print "zKey: " + keys.z
