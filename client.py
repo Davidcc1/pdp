@@ -14,13 +14,24 @@ from Crypto.Cipher import AES
 
 # t -> number of tokens (possible challenges) example = 50
 # r -> indices per verification example = 16
+#nB -> number of blocks = 128
 
+mode = sys.argv[1]
+
+input_array = sys.argv[2].split(',')
+k = int(input_array[0])
+t = int(input_array[1])
+r = int(input_array[2])
+nB = int(input_array[3])
+
+d = sys.argv[3]
+"""
 k = int(sys.argv[1])
 t = int(sys.argv[2])
 r = int(sys.argv[3])
 nB = int(sys.argv[4])
 d = sys.argv[5]
-
+"""
 data = open("data/"+d, "r").read()
 
 size_piece = len(data)//nB
@@ -104,13 +115,21 @@ def permutation_iter(r, kx):
     for it in xrange(r):
         aux.append(it)
 
-    aes = pyaes.AES(kx)
-    permuted_array = aes.encrypt(aux)
+    print aux
+    random.seed(kx)
+    for elem in xrange(r):
+        rand = random.randint(0,r-1)
+        tmp = aux[elem]
+        aux[elem] = aux[rand]
+        aux[rand] = tmp
+    print aux
+    print
+    #aes = pyaes.AES(kx)
+    #permuted_array = aes.encrypt(aux)
     #aes = AESCipher(kx)
     #permuted_array = aes.encrypt(aux)
-    print permuted_array
-    
-    return permuted_array
+
+    return aux
 
 
 def prepare_data_to_send(dataBlock,x,new_vx):
@@ -121,8 +140,6 @@ def prepare_data_to_send(dataBlock,x,new_vx):
 
 
 def sendDataToServer(obj):
-    #print obj.toJson()
-    #codificar de otra forma... error en dumps utf-8
     data_string = json.dumps(obj.toJson())
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -137,7 +154,7 @@ def sendDataToServer(obj):
         amount_expected = len(message)
 
         while amount_received < 1:
-            data = sock.recv(1000)
+            data = sock.recv(100000)
             amount_received += 1
             print >> sys.stderr, 'received "%s"' % data
     finally:
@@ -158,7 +175,6 @@ for x in xrange(1,t+1):
     cx.update(str(x))
     cx = cx.hexdigest()
 
-    #print "hex -> "+ cx
 
     inputKey = str(cx)
 
