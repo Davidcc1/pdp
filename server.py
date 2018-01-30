@@ -1,5 +1,7 @@
 import socket
 import sys
+from socket import error as SocketError
+import errno
 
 stored_data_file = open("serverDB/data_from_client.txt","w")
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,6 +29,10 @@ while True:
                 connection.sendall("all data received")
                 print >>sys.stderr, 'no more data from', client_address
                 break
+    except SocketError as e:
+        if e.errno != errno.ECONNRESET:
+            raise
+        pass
     finally:
 
         connection.close()

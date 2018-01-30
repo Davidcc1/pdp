@@ -1,7 +1,8 @@
-import socket, sys, random, hmac, hashlib, binascii, os,json
+import socket, sys, random, hmac, hashlib, binascii, os, json, base64
 import textwrap
 import pyaes.aes as pyaes
-
+from Crypto import Random
+from Crypto.Cipher import AES
 
 # k-> n bits of keis
 #c ?
@@ -26,6 +27,31 @@ size_piece = len(data)//nB
 splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
 #print splited_data
 
+class AESCipher(object):
+
+    def __init__(self, key):
+        self.bs = 16
+        self.key = key
+
+    def encrypt(self, raw):
+        raw = self._pad(raw)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(cipher.encrypt(raw))
+
+    def decrypt(self, enc):
+        enc = base64.b64decode(enc)
+        iv = enc[:AES.block_size]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return self._unpad(cipher.decrypt(enc[AES.block_size:])).decode('utf-8')
+
+    def _pad(self, s):
+        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+
+    @staticmethod
+    def _unpad(s):
+        return s[:-ord(s[len(s)-1:])]
+
 
 def randomBinaryKey(k):
     key = ""
@@ -45,13 +71,16 @@ class keys:
     z = randomBinaryKey(k)
     k = randomBinaryKey(k)
 
+
 class dataToSend:
     saved_data = False
     token_array = []
+
     def __init__(self, load_object=False):
         if load_object:
             saved_data = load_object["data"]
             token_array = load_object["tokens"]
+
     def toJson(self):
         return {
             "data": self.saved_data,
@@ -62,6 +91,7 @@ class dataToSend:
 class element:
     i = 0
     vi = 0
+
     def toJson(self):
         return{
             "i": self.i,
@@ -70,15 +100,16 @@ class element:
 
 
 def permutation_iter(r, kx):
-
     aux = []
     for it in xrange(r):
         aux.append(it)
 
-    #print aux
     aes = pyaes.AES(kx)
     permuted_array = aes.encrypt(aux)
-
+    #aes = AESCipher(kx)
+    #permuted_array = aes.encrypt(aux)
+    print permuted_array
+    
     return permuted_array
 
 
@@ -90,7 +121,7 @@ def prepare_data_to_send(dataBlock,x,new_vx):
 
 
 def sendDataToServer(obj):
-    print obj.toJson()
+    #print obj.toJson()
     #codificar de otra forma... error en dumps utf-8
     data_string = json.dumps(obj.toJson())
 
@@ -145,7 +176,9 @@ for x in xrange(1,t+1):
     vx = vx.hexdigest()
 
     #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
-    aes = pyaes.AESModeOfOperationCTR(keys.z)
+    #aes = pyaes.AESModeOfOperationCTR(keys.z)
+    #encrypted_vx = aes.encrypt(str(x)+vx)
+    aes = AESCipher(keys.z)
     encrypted_vx = aes.encrypt(str(x)+vx)
     new_vx = hmac.new(keys.z)
     new_vx.update(encrypted_vx)
