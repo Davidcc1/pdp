@@ -1,6 +1,5 @@
-import socket, sys, random, hmac, hashlib, binascii, os, json, base64
+import socket, sys, random, hmac, hashlib, binascii, os, json, base64,time
 import textwrap
-import pyaes.aes as pyaes
 from Crypto import Random
 from Crypto.Cipher import AES
 
@@ -16,27 +15,7 @@ from Crypto.Cipher import AES
 # r -> indices per verification example = 16
 #nB -> number of blocks = 128
 
-mode = sys.argv[1]
-
-input_array = sys.argv[2].split(',')
-k = int(input_array[0])
-t = int(input_array[1])
-r = int(input_array[2])
-nB = int(input_array[3])
-
-d = sys.argv[3]
-"""
-k = int(sys.argv[1])
-t = int(sys.argv[2])
-r = int(sys.argv[3])
-nB = int(sys.argv[4])
-d = sys.argv[5]
-"""
-data = open("data/"+d, "r").read()
-
-size_piece = len(data)//nB
-splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
-#print splited_data
+mode = sys.argv[1].split('=')[1]
 
 class AESCipher(object):
 
@@ -73,14 +52,15 @@ def randomBinaryKey(k):
             key = key+"1"
 
     key = "%32X" % int(key,2)
-
+    print key
     return key
 
 
-class keys:
-    w = randomBinaryKey(k)
-    z = randomBinaryKey(k)
-    k = randomBinaryKey(k)
+class keys(object):
+    def __init__(self,k):
+        self.w = randomBinaryKey(k)
+        self.z = randomBinaryKey(k)
+        self.k = randomBinaryKey(k)
 
 
 class dataToSend:
@@ -115,19 +95,12 @@ def permutation_iter(r, kx):
     for it in xrange(r):
         aux.append(it)
 
-    print aux
     random.seed(kx)
     for elem in xrange(r):
         rand = random.randint(0,r-1)
         tmp = aux[elem]
         aux[elem] = aux[rand]
         aux[rand] = tmp
-    print aux
-    print
-    #aes = pyaes.AES(kx)
-    #permuted_array = aes.encrypt(aux)
-    #aes = AESCipher(kx)
-    #permuted_array = aes.encrypt(aux)
 
     return aux
 
@@ -137,6 +110,10 @@ def prepare_data_to_send(dataBlock,x,new_vx):
     new_element.i = x
     new_element.vi = new_vx
     dataBlock.token_array.append(new_element.toJson())
+
+def storeKeys(jsonKeys):
+    keys_file = open("client/keys"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
+    keys_file.write(json.dumps(jsonKeys))
 
 
 def sendDataToServer(obj):
@@ -162,49 +139,65 @@ def sendDataToServer(obj):
         sock.close()
 
 
-dataBlock = dataToSend()
-dataBlock.saved_data = data
-for x in xrange(1,t+1):
-    #generate kx = fw(x)
-    kx = hmac.new(keys.w)
-    kx.update(str(x))
-    kx = kx.hexdigest()
+if mode == 'store':
+    input_array = sys.argv[2].split(',')
+    k = int(input_array[0].split('=')[1])
+    t = int(input_array[1].split('=')[1])
+    r = int(input_array[2].split('=')[1])
+    nB = int(input_array[3].split('=')[1])
 
-    #generate cx = fz(x)
-    cx = hmac.new(keys.z)
-    cx.update(str(x))
-    cx = cx.hexdigest()
+    d = sys.argv[3]
 
+    data = open("data/"+d, "r").read()
 
-    inputKey = str(cx)
+    size_piece = len(data)//nB
 
-    #Crec que es una mala permutation, ja que amb un array de [0-15] retorna valors molt superiors...
-    permuted_array = permutation_iter(r,kx)
-    modulo_arr = []
+    splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
+    keys = keys(k)
+    dataBlock = dataToSend()
+    dataBlock.saved_data = data
+    for x in xrange(1,t+1):
+        #generate kx = fw(x)
+        kx = hmac.new(keys.w)
+        kx.update(str(x))
+        kx = kx.hexdigest()
 
-    for j in permuted_array:
-        inputKey += format(splited_data[j%nB].encode("hex"))
-        modulo_arr.append(j%nB)
-
-    #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
-    vx = hashlib.sha256()
-    vx.update(inputKey)
-    vx = vx.hexdigest()
-
-    #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
-    #aes = pyaes.AESModeOfOperationCTR(keys.z)
-    #encrypted_vx = aes.encrypt(str(x)+vx)
-    aes = AESCipher(keys.z)
-    encrypted_vx = aes.encrypt(str(x)+vx)
-    new_vx = hmac.new(keys.z)
-    new_vx.update(encrypted_vx)
-    new_vx = encrypted_vx + new_vx.hexdigest()
-
-    prepare_data_to_send(dataBlock,x,new_vx)
+        #generate cx = fz(x)
+        cx = hmac.new(keys.z)
+        cx.update(str(x))
+        cx = cx.hexdigest()
 
 
-sendDataToServer(dataBlock)
+        inputKey = str(cx)
 
-print "wKey: " + keys.w
-print "zKey: " + keys.z
-print "kKey: " + keys.k
+        #Crec que es una mala permutation, ja que amb un array de [0-15] retorna valors molt superiors...
+        permuted_array = permutation_iter(r,kx)
+
+        for j in permuted_array:
+            inputKey += format(splited_data[j])
+        print inputKey
+        #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
+        vx = hashlib.sha256()
+        vx.update(inputKey)
+        vx = vx.hexdigest()
+        print vx
+
+        #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
+        aes = AESCipher(keys.z)
+        encrypted_vx = aes.encrypt(str(x)+vx)
+        new_vx = hmac.new(keys.z)
+        new_vx.update(encrypted_vx)
+        new_vx = encrypted_vx + new_vx.hexdigest()
+
+        prepare_data_to_send(dataBlock,x,new_vx)
+
+
+    jsonKeys = {'w':keys.w,'z':keys.z,'k':keys.k,'tokens':str(r)}
+    storeKeys(jsonKeys)
+    sendDataToServer(dataBlock)
+
+    print "wKey: " + keys.w
+    print "zKey: " + keys.z
+    print "kKey: " + keys.k
+elif mode == 'challenge':
+    print 'not implemented yet'
