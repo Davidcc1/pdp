@@ -1,9 +1,9 @@
 import socket
-import sys
+import sys, time
 from socket import error as SocketError
 import errno
 
-stored_data_file = open("serverDB/data_from_client.txt","w")
+stored_data_file = open("serverDB/data_from_client"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 server_address = ('localhost',4000)

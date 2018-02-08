@@ -89,13 +89,28 @@ class element:
             "vi": self.vi
         }
 
-
+"""
 def permutation_iter(r, kx):
     aux = []
     for it in xrange(r):
         aux.append(it)
 
     random.seed(kx)
+    for elem in xrange(r):
+        rand = random.randint(0,r-1)
+        tmp = aux[elem]
+        aux[elem] = aux[rand]
+        aux[rand] = tmp
+
+    return aux
+"""
+def permutation_iter(r, kx,nB):
+    aux = []
+    random.seed(kx)
+    for it in xrange(r):
+        aux.append(random.randint(0,nB-1))
+
+    print aux
     for elem in xrange(r):
         rand = random.randint(0,r-1)
         tmp = aux[elem]
@@ -170,8 +185,7 @@ if mode == 'store':
 
         inputKey = str(cx)
 
-        #Crec que es una mala permutation, ja que amb un array de [0-15] retorna valors molt superiors...
-        permuted_array = permutation_iter(r,kx)
+        permuted_array = permutation_iter(r,kx, nB)
 
         for j in permuted_array:
             inputKey += format(splited_data[j])
