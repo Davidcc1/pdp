@@ -238,32 +238,32 @@ if mode == 'store':
     print "kKey: " + keys.k
 
 elif mode == 'challenge':
-    input_array = sys.argv[2].split(',')
-    i = int(input_array[0].split('=')[1])
-    f_data = input_array[1].split('=')[1]
+	input_array = sys.argv[2].split(',')
+	i = int(input_array[0].split('=')[1])
+	f_data = input_array[1].split('=')[1]
 
-    keys_file = open("client/keys"+f_data+".txt","r")
+	keys_file = open("client/keys"+f_data+".txt","r")
 
-    data = keys_file.read()
-    json_data = json.loads(data)
+	data = keys_file.read()
+	json_data = json.loads(data)
 	r = json_data["r"]
 	nB = json_data["nB"]
 
-    #generate kx = fw(x)
-    ki = hmac.new(str(json_data["w"]))
-    ki.update(str(i))
-    ki = ki.hexdigest()
+	#generate kx = fw(x)
+	ki = hmac.new(str(json_data["w"]))
+	ki.update(str(i))
+	ki = ki.hexdigest()
 
-    #generate cx = fz(x)
-    ci = hmac.new(str(json_data["z"]))
-    ci.update(str(i))
-    ci = ci.hexdigest()
+	#generate cx = fz(x)
+	ci = hmac.new(str(json_data["z"]))
+	ci.update(str(i))
+	ci = ci.hexdigest()
 
-    json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r,'nB':nB,'file':f_data,'i':i}
-    str_to_server = json.dumps(json_to_server)
-    challengeServer(str_to_server)
+	json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r,'nB':nB,'file':f_data,'i':i}
+	str_to_server = json.dumps(json_to_server)
+	challengeServer(str_to_server)
 
 
-    print ki
-    print ci
-    print data
+	print ki
+	print ci
+	print data
