@@ -126,6 +126,7 @@ def prepare_data_to_send(dataBlock,x,new_vx):
     new_element.vi = new_vx
     dataBlock.token_array.append(new_element.toJson())
 
+
 def storeKeys(jsonKeys):
     """
     Store data into a file
@@ -133,12 +134,27 @@ def storeKeys(jsonKeys):
     keys_file = open("metadata/keys"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
     keys_file.write(json.dumps(jsonKeys))
 
+
 def pseudoRandomFunction(key, index):
     mac =  hmac.new(key)
     mac.update(index)
     mac = mac.hexdigest()
 
     return mac
+
+def AEk(k,vx,x):
+    """
+    Authenticated encryption scheme, encript x index concatenated with vx under key k
+    then append a hash of the result of encryption.
+    return the result.    
+    """
+    aes = AESCipher(k)
+    encrypted_vx = aes.encrypt(str(x)+vx)
+    new_vx = hmac.new(k)
+    new_vx.update(encrypted_vx)
+    new_vx = encrypted_vx + new_vx.hexdigest()
+
+    return new_vx
 
 
 def sendDataToServer(obj):
@@ -169,12 +185,12 @@ def sendDataToServer(obj):
         print >>sys.stderr, 'closing socket'
         sock.close()
 
+
 def challengeServer(data_string):
     """
     Send a request to server in order to obtain keys to validate the data possession
     as string then return that string
     """
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = ('localhost', 4000)
     print >>sys.stderr, 'connection to %s port %s' % server_address
@@ -194,6 +210,7 @@ def challengeServer(data_string):
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
+
 
 mode = sys.argv[1].split('=')[1]
 
@@ -215,17 +232,7 @@ if mode == 'store':
     dataBlock = dataToSend()
     dataBlock.saved_data = data
     for x in xrange(1,t+1):
-        """
-        #generate kx = fw(x)
-        kx = hmac.new(keys.w)
-        kx.update(str(x))
-        kx = kx.hexdigest()
 
-        #generate cx = fz(x)
-        cx = hmac.new(keys.z)
-        cx.update(str(x))
-        cx = cx.hexdigest()
-        """
         #generate kx = fw(x)
         kx = pseudoRandomFunction(keys.w, str(x))
         #generate cx = fz(x)
@@ -237,19 +244,22 @@ if mode == 'store':
 
         for j in permuted_array:
             inputKey += format(splited_data[j])
-        print inputKey
+
         #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
         vx = hashlib.sha256()
         vx.update(inputKey)
         vx = vx.hexdigest()
-        print vx
 
         #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
-        aes = AESCipher(keys.z)
+        new_vx = AEk(keys.k,vx,x)
+
+        """
+        aes = AESCipher(keys.k)
         encrypted_vx = aes.encrypt(str(x)+vx)
-        new_vx = hmac.new(keys.z)
+        new_vx = hmac.new(keys.k)
         new_vx.update(encrypted_vx)
         new_vx = encrypted_vx + new_vx.hexdigest()
+        """
 
         prepare_data_to_send(dataBlock,x,new_vx)
 

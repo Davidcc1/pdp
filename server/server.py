@@ -1,5 +1,5 @@
 import socket
-import sys, time,json
+import sys, time,json, hashlib
 from socket import error as SocketError
 import errno
 
@@ -49,7 +49,7 @@ while True:
 					connection.sendall("error saving data! Try it later!")
 
 			elif mode == "challenge":
-				
+
 				#Get all elements from client request
 				ki = json_data["ki"]
 				ci = json_data["ci"]
@@ -76,7 +76,7 @@ while True:
 
 				for j in permuted_array:
 					inputKey += format(splited_data[j])
-					
+
 				z = hashlib.sha256()
 				z.update(inputKey)
 				z = z.hexdigest()
