@@ -32,70 +32,71 @@ while True:
 	try:
 		print >>sys.stderr,'connection from', client_address
 		while True:
-		data = connection.recv(100000)
-		print >>sys.stderr,'received "%s"' % data
-		if data:
-			json_data = json.loads(data)
-			mode = json_data["mode"]
-			if mode == "store":
-				stored_data_file = open("serverDB/data_from_client"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
-				print >>sys.stderr, 'sending data back to the client'
-				del json_data['mode']
-				data = json.dumps(json_data)
-				try:
-					stored_data_file.write(data)
-					connection.sendall(json_response)
-				except ValueError:
-					connection.sendall("error saving data! Try it later!")
+            data = connection.recv(100000)
+        	print >>sys.stderr,'received "%s"' % data
+        	if data:
+        		json_data = json.loads(data)
+        		mode = json_data["mode"]
+        		if mode == "store":
+        			stored_data_file = open("serverDB/data_from_client"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
+        			print >>sys.stderr, 'sending data back to the client'
+        			del json_data['mode']
+        			data = json.dumps(json_data)
+        			try:
+        				stored_data_file.write(data)
+        				connection.sendall(json_response)
+        			except ValueError:
+        				connection.sendall("error saving data! Try it later!")
 
-			elif mode == "challenge":
+        		elif mode == "challenge":
 
-				#Get all elements from client request
-				ki = json_data["ki"]
-				ci = json_data["ci"]
-				r = int(json_data["r"])
-				i = json_data["i"]
-				nB = int(json_data["nB"])
-				fdate =  json_data["file"]
+        			#Get all elements from client request
+        			ki = json_data["ki"]
+        			ci = json_data["ci"]
+        			r = int(json_data["r"])
+        			i = json_data["i"]
+        			nB = int(json_data["nB"])
+        			fdate =  json_data["file"]
 
-				stored_data_file = open("serverDB/data_from_client"+ fdate +".txt","r")
-				data = stored_data_file.read()
-				stored_data = json.loads(data)
+        			stored_data_file = open("serverDB/data_from_client"+ fdate +".txt","r")
+        			data = stored_data_file.read()
+        			stored_data = json.loads(data)
 
-				#get token with index i
-				for token in mock_data["tokens"]:
-					if token["i"] == int(i):
-						vi = token["vi"]
-						break
+        			#get token with index i
+        			for token in mock_data["tokens"]:
+        				if token["i"] == int(i):
+        					vi = token["vi"]
+        					break
 
-				size_piece = len(stored_data["data"])//nB
+        			size_piece = len(stored_data["data"])//nB
 
-				splited_data = textwrap.wrap(stored_data["data"],size_piece,break_long_words=True)
+        			splited_data = textwrap.wrap(stored_data["data"],size_piece,break_long_words=True)
 
-				permuted_array = permutation_iter(r,ki, nB)
+        			permuted_array = permutation_iter(r,ki, nB)
 
-				for j in permuted_array:
-					inputKey += format(splited_data[j])
+        			for j in permuted_array:
+        				inputKey += format(splited_data[j])
 
-				z = hashlib.sha256()
-				z.update(inputKey)
-				z = z.hexdigest()
+        			z = hashlib.sha256()
+        			z.update(inputKey)
+        			z = z.hexdigest()
 
-				json_response = {"z": z,"vi": vi}
+        			json_response = {"z": z,"vi": vi}
 
-				json_response = json.dumps(json_response)
+        			json_response = json.dumps(json_response)
 
-				connection.sendall(json_response)
+        			connection.sendall(json_response)
 
-		else:
-			print >>sys.stderr, 'sending data back to the client'
-			connection.sendall("all data received")
-			print >>sys.stderr, 'no more data from', client_address
-			break
+            else:
+    			print >>sys.stderr, 'sending data back to the client'
+    			connection.sendall("all data received")
+    			print >>sys.stderr, 'no more data from', client_address
+    			break
+
 	except SocketError as e:
 		if e.errno != errno.ECONNRESET:
 			raise
 		pass
+        
 	finally:
-
 		connection.close()
