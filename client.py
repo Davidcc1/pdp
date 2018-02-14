@@ -132,7 +132,30 @@ def storeKeys(jsonKeys):
 
 
 def sendDataToServer(obj):
-    data_string = json.dumps(obj.toJson())
+    obj_json = obj.toJson()
+    obj_json["mode"] = "store"
+    data_string = json.dumps(obj_json)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = ('localhost', 4000)
+    print >>sys.stderr, 'connection to %s port %s' % server_address
+    sock.connect(server_address)
+    try:
+        message = data_string
+        sock.sendall(message)
+
+        amount_received = 0
+        amount_expected = len(message)
+
+        while amount_received < 1:
+            data = sock.recv(100000)
+            amount_received += 1
+            print >> sys.stderr, 'received "%s"' % data
+    finally:
+        print >>sys.stderr, 'closing socket'
+        sock.close()
+
+def challengeServer(data_string):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_address = ('localhost', 4000)
@@ -213,5 +236,33 @@ if mode == 'store':
     print "wKey: " + keys.w
     print "zKey: " + keys.z
     print "kKey: " + keys.k
+
 elif mode == 'challenge':
-    print 'not implemented yet'
+    input_array = sys.argv[2].split(',')
+    i = int(input_array[0].split('=')[1])
+    f_data = input_array[1].split('=')[1]
+    r = int(input_array[2].split('=')[1])
+
+    keys_file = open("client/keys"+f_data+".txt","r")
+
+    data = keys_file.read()
+    json_data = json.loads(data)
+
+    #generate kx = fw(x)
+    ki = hmac.new(str(json_data["w"]))
+    ki.update(str(i))
+    ki = ki.hexdigest()
+
+    #generate cx = fz(x)
+    ci = hmac.new(str(json_data["w"]))
+    ci.update(str(i))
+    ci = ci.hexdigest()
+
+    json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r}
+    str_to_server = json.dumps(json_to_server)
+    challengeServer(str_to_server)
+
+
+    print ki
+    print ci
+    print data
