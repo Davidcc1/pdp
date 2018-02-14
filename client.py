@@ -229,7 +229,7 @@ if mode == 'store':
         prepare_data_to_send(dataBlock,x,new_vx)
 
 
-    jsonKeys = {'w':keys.w,'z':keys.z,'k':keys.k,'tokens':str(r)}
+    jsonKeys = {'w':keys.w,'z':keys.z,'k':keys.k,'tokens':str(r),'nB':str(nB),'r':str(r)}
     storeKeys(jsonKeys)
     sendDataToServer(dataBlock)
 
@@ -241,12 +241,13 @@ elif mode == 'challenge':
     input_array = sys.argv[2].split(',')
     i = int(input_array[0].split('=')[1])
     f_data = input_array[1].split('=')[1]
-    r = int(input_array[2].split('=')[1])
 
     keys_file = open("client/keys"+f_data+".txt","r")
 
     data = keys_file.read()
     json_data = json.loads(data)
+	r = json_data["r"]
+	nB = json_data["nB"]
 
     #generate kx = fw(x)
     ki = hmac.new(str(json_data["w"]))
@@ -254,11 +255,11 @@ elif mode == 'challenge':
     ki = ki.hexdigest()
 
     #generate cx = fz(x)
-    ci = hmac.new(str(json_data["w"]))
+    ci = hmac.new(str(json_data["z"]))
     ci.update(str(i))
     ci = ci.hexdigest()
 
-    json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r}
+    json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r,'nB':nB,'file':f_data,'i':i}
     str_to_server = json.dumps(json_to_server)
     challengeServer(str_to_server)
 
