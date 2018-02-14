@@ -1,14 +1,17 @@
 # README #
 
-actually server and client are in the same git project
+Actually server and client are in the same git project.
 
 Server: 
-	command:
+
+command:
 	
-		python server.py 
+	python server.py 
 	
 Client:
-Has two basic algorithms diferenced by mode 
+
+Has two basic algorithms diferenced by mode. 
+
 Store mode command is:
 	
 	python client.py mode=store k=128,t=15,r=16,nB=128 data.txt
@@ -23,6 +26,6 @@ Challenge mode command is:
 	python client.py mode=challenge i=1,f_data=02_02_18-1856,r=16
 	
 	- i -> token to verification
-	-f_data -> file date to validate
+	- f_data -> file date to validate
 	- r -> indices per verification example = 16
 	
