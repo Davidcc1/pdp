@@ -146,7 +146,7 @@ def AEk(k,vx,x):
     """
     Authenticated encryption scheme, encript x index concatenated with vx under key k
     then append a hash of the result of encryption.
-    return the result.    
+    return the result.
     """
     aes = AESCipher(k)
     encrypted_vx = aes.encrypt(str(x)+vx)
@@ -174,17 +174,16 @@ def sendDataToServer(obj):
         message = data_string
         sock.sendall(message)
 
-        amount_received = 0
-        amount_expected = len(message)
         response = ''
-        
+
         while True:
             data = sock.recv(10000)
             response += data
             if len(data) < 10000:
                 break
+
         print >> sys.stderr, 'received "%s"' % response
-        
+
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
@@ -203,17 +202,16 @@ def challengeServer(data_string):
         message = data_string
         sock.sendall(message)
 
-        amount_received = 0
-        amount_expected = len(message)
         response = ''
         while True:
             data = sock.recv(10000)
             response += data
             if len(data) < 10000:
                 break
+                
         print >> sys.stderr, 'received "%s"' % data
         return response
-        
+
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
