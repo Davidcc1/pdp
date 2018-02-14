@@ -176,11 +176,15 @@ def sendDataToServer(obj):
 
         amount_received = 0
         amount_expected = len(message)
-
-        while amount_received < 1:
-            data = sock.recv(100000)
-            amount_received += 1
-            print >> sys.stderr, 'received "%s"' % data
+        response = ''
+        
+        while True:
+            data = sock.recv(10000)
+            response += data
+            if len(data) < 10000:
+                break
+        print >> sys.stderr, 'received "%s"' % response
+        
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
@@ -201,12 +205,15 @@ def challengeServer(data_string):
 
         amount_received = 0
         amount_expected = len(message)
-
-        while amount_received < 1:
-            data = sock.recv(100000)
-            amount_received += 1
-            print >> sys.stderr, 'received "%s"' % data
-            return data
+        response = ''
+        while True:
+            data = sock.recv(10000)
+            response += data
+            if len(data) < 10000:
+                break
+        print >> sys.stderr, 'received "%s"' % data
+        return response
+        
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
