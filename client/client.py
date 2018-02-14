@@ -127,7 +127,7 @@ def prepare_data_to_send(dataBlock,x,new_vx):
     dataBlock.token_array.append(new_element.toJson())
 
 def storeKeys(jsonKeys):
-    keys_file = open("client/keys"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
+    keys_file = open("metadata/keys"+time.strftime('%d_%m_%y-%H%M')+".txt","w")
     keys_file.write(json.dumps(jsonKeys))
 
 
@@ -242,7 +242,7 @@ elif mode == 'challenge':
 	i = int(input_array[0].split('=')[1])
 	f_data = input_array[1].split('=')[1]
 
-	keys_file = open("client/keys"+f_data+".txt","r")
+	keys_file = open("metadata/keys"+f_data+".txt","r")
 
 	data = keys_file.read()
 	json_data = json.loads(data)
