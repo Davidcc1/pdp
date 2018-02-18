@@ -1,5 +1,5 @@
 import socket
-import sys, time,json, hashlib
+import sys, time,json, hashlib, textwrap,random
 from socket import error as SocketError
 import errno
 
@@ -9,7 +9,6 @@ def permutation_iter(r, kx,nB):
     for it in xrange(r):
         aux.append(random.randint(0,nB-1))
 
-    print aux
     for elem in xrange(r):
         rand = random.randint(0,r-1)
         tmp = aux[elem]
@@ -26,10 +25,10 @@ sock.bind(server_address)
 
 sock.listen(1)
 while True:
-	print >>sys.stderr,'waiting for connection'
-	connection,client_address = sock.accept()
+    print >>sys.stderr,'waiting for connection'
+    connection,client_address = sock.accept()
 
-	try:
+    try:
         print >>sys.stderr,'connection from', client_address
         data = ''
 
@@ -50,53 +49,52 @@ while True:
         	data = json.dumps(json_data)
         	try:
         		stored_data_file.write(data)
-        		connection.sendall(json_response)
-        	except ValueError:
+        		connection.sendall("all data receeived and saved")
+        	except ValueError as err:
         		connection.sendall("error saving data! Try it later!")
 
         elif mode == "challenge":
 
-        	#Get all elements from client request
-        	ki = json_data["ki"]
-        	ci = json_data["ci"]
-        	r = int(json_data["r"])
-        	i = json_data["i"]
-        	nB = int(json_data["nB"])
-        	fdate =  json_data["file"]
+            #Get all elements from client request
+            ki = json_data["ki"]
+            ci = json_data["ci"]
+            r = int(json_data["r"])
+            i = json_data["i"]
+            nB = int(json_data["nB"])
+            fdate =  json_data["file"]
 
-        	stored_data_file = open("serverDB/data_from_client"+ fdate +".txt","r")
-        	data = stored_data_file.read()
-        	stored_data = json.loads(data)
+            stored_data_file = open("serverDB/data_from_client"+ fdate +".txt","r")
+            data = stored_data_file.read()
+            stored_data = json.loads(data)
 
         	#get token with index i
-        	for token in mock_data["tokens"]:
+            for token in stored_data["tokens"]:
         		if token["i"] == int(i):
         			vi = token["vi"]
         			break
 
-        	size_piece = len(stored_data["data"])//nB
+            size_piece = len(stored_data["data"])//nB
+            splited_data = textwrap.wrap(stored_data["data"],size_piece,break_long_words=True)
 
-        	splited_data = textwrap.wrap(stored_data["data"],size_piece,break_long_words=True)
+            permuted_array = permutation_iter(r,ki, nB)
 
-        	permuted_array = permutation_iter(r,ki, nB)
-
-        	for j in permuted_array:
+            inputKey = str(ci)
+            for j in permuted_array:
         		inputKey += format(splited_data[j])
 
-        	z = hashlib.sha256()
-        	z.update(inputKey)
-        	z = z.hexdigest()
+            z = hashlib.sha256()
+            z.update(inputKey)
+            z = z.hexdigest()
 
-        	json_response = {"z": z,"vi": vi}
-        	json_response = json.dumps(json_response)
+            json_response = {"z": z,"vi": vi}
+            json_response = json.dumps(json_response)
 
-        	connection.sendall(json_response)
+            connection.sendall(json_response)
 
-
-	except SocketError as e:
+    except SocketError as e:
 		if e.errno != errno.ECONNRESET:
 			raise
 		pass
 
-	finally:
+    finally:
 		connection.close()

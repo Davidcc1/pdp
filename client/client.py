@@ -23,7 +23,9 @@ class AESCipher(object):
 
     def encrypt(self, raw):
         raw = self._pad(raw)
-        iv = Random.new().read(AES.block_size)
+        #iv = Random.new().read(AES.block_size)
+        #actually is random string with 16 bytes length
+        iv = "LSFUw7ndObHjY2bA"
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         return base64.b64encode(cipher.encrypt(raw))
 
@@ -148,12 +150,12 @@ def AEk(k,vx,x):
     then append a hash of the result of encryption.
     return the result.
     """
-    aes = AESCipher(k)
+
+    aes = AESCipher(str(k))
     encrypted_vx = aes.encrypt(str(x)+vx)
     new_vx = hmac.new(k)
     new_vx.update(encrypted_vx)
     new_vx = encrypted_vx + new_vx.hexdigest()
-
     return new_vx
 
 
@@ -231,9 +233,9 @@ if mode == 'store':
     data = open("data/"+d, "r").read()
 
     size_piece = len(data)//nB
-    print data
+    #print data
     splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
-    print splited_data
+    #print splited_data
     keys = keys(k)
     dataBlock = dataToSend()
     dataBlock.saved_data = data
@@ -250,8 +252,7 @@ if mode == 'store':
 
         for j in permuted_array:
             inputKey += format(splited_data[j])
-        if x == 1:
-            print inputKey
+
         #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
         vx = hashlib.sha256()
         vx.update(inputKey)
@@ -260,24 +261,12 @@ if mode == 'store':
         #calculate v'i -> AEk(i,vi) : aes de x+vx concatenat amb el hash del resultat (aes de x+vx).
         new_vx = AEk(keys.k,vx,x)
 
-        """
-        aes = AESCipher(keys.k)
-        encrypted_vx = aes.encrypt(str(x)+vx)
-        new_vx = hmac.new(keys.k)
-        new_vx.update(encrypted_vx)
-        new_vx = encrypted_vx + new_vx.hexdigest()
-        """
-
         prepare_data_to_send(dataBlock,x,new_vx)
 
 
     jsonKeys = {'w':keys.w,'z':keys.z,'k':keys.k,'tokens':str(r),'nB':str(nB),'r':str(r)}
     storeKeys(jsonKeys)
     sendDataToServer(dataBlock)
-
-    print "wKey: " + keys.w
-    print "zKey: " + keys.z
-    print "kKey: " + keys.k
 
 elif mode == 'challenge':
     input_array = sys.argv[2].split(',')
@@ -305,18 +294,11 @@ elif mode == 'challenge':
     z = json_checker["z"]
     vi = json_checker["vi"]
     k = str(json_data["k"])
-    print k
-    print z
+
     checker = AEk(k,z,i)
-    if checker == vi:
-        print "IT WORKS"
+
+    if str(checker) == str(vi):
+        print "DATA VERIFIED!"
     else:
         print
-        print "bad result"
-        print checker
-        print vi
-
-    #print ki
-    #print ci
-    #print data
-    #print check_data
+        print "DATA SERVER HAS DELETED OR MODIFIED"
