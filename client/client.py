@@ -54,7 +54,7 @@ def randomBinaryKey(k):
 
     key = "%32X" % int(key,2)
     print key
-    return key
+    return str(key)
 
 
 class keys(object):
@@ -208,7 +208,7 @@ def challengeServer(data_string):
             response += data
             if len(data) < 10000:
                 break
-                
+
         print >> sys.stderr, 'received "%s"' % data
         return response
 
@@ -231,8 +231,9 @@ if mode == 'store':
     data = open("data/"+d, "r").read()
 
     size_piece = len(data)//nB
-
+    print data
     splited_data = textwrap.wrap(data,size_piece,break_long_words=True)
+    print splited_data
     keys = keys(k)
     dataBlock = dataToSend()
     dataBlock.saved_data = data
@@ -249,7 +250,8 @@ if mode == 'store':
 
         for j in permuted_array:
             inputKey += format(splited_data[j])
-
+        if x == 1:
+            print inputKey
         #calculate vi -> cx + D[gk(1)] + D[gk(2)] + ...
         vx = hashlib.sha256()
         vx.update(inputKey)
@@ -278,39 +280,43 @@ if mode == 'store':
     print "kKey: " + keys.k
 
 elif mode == 'challenge':
-	input_array = sys.argv[2].split(',')
-	i = int(input_array[0].split('=')[1])
-	f_data = input_array[1].split('=')[1]
+    input_array = sys.argv[2].split(',')
+    i = int(input_array[0].split('=')[1])
+    f_data = input_array[1].split('=')[1]
 
-	keys_file = open("metadata/keys"+f_data+".txt","r")
+    keys_file = open("metadata/keys"+f_data+".txt","r")
 
-	data = keys_file.read()
-	json_data = json.loads(data)
-	r = json_data["r"]
-	nB = json_data["nB"]
-    """
-	#generate kx = fw(x)
-	ki = hmac.new(str(json_data["w"]))
-	ki.update(str(i))
-	ki = ki.hexdigest()
+    data = keys_file.read()
+    json_data = json.loads(data)
+    r = json_data["r"]
+    nB = json_data["nB"]
 
-	#generate cx = fz(x)
-	ci = hmac.new(str(json_data["z"]))
-	ci.update(str(i))
-	ci = ci.hexdigest()
-    """
     #generate kx = fw(x)
     ki = pseudoRandomFunction(str(json_data["w"]), str(i))
     #generate cx = fz(x)
     ci = pseudoRandomFunction(str(json_data["z"]), str(i))
 
-	json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r,'nB':nB,'file':f_data,'i':i}
-	str_to_server = json.dumps(json_to_server)
+    json_to_server = {'mode': "challenge", 'ki': ki, 'ci': ci,'r':r,'nB':nB,'file':f_data,'i':i}
+    str_to_server = json.dumps(json_to_server)
 
-	check_data = challengeServer(str_to_server)
+    check_data = challengeServer(str_to_server)
 
+    json_checker = json.loads(check_data)
+    z = json_checker["z"]
+    vi = json_checker["vi"]
+    k = str(json_data["k"])
+    print k
+    print z
+    checker = AEk(k,z,i)
+    if checker == vi:
+        print "IT WORKS"
+    else:
+        print
+        print "bad result"
+        print checker
+        print vi
 
-	print ki
-	print ci
-	print data
-    print check_data
+    #print ki
+    #print ci
+    #print data
+    #print check_data
