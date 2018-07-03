@@ -1,4 +1,0 @@
-AES implementation from https://github.com/rolandshoemaker/d-AES 
-
-
-https://github.com/ricmoo/pyaes
