@@ -33,14 +33,14 @@ while True:
         data = ''
 
         while True:
-            part = connection.recv(10000)
+            part = connection.recv(100)
             data += part
-            if len(part) < 10000:
+            if len(part) < 100:
                 break
 
         print >>sys.stderr,'received "%s"' % data
 
-        json_data = json.loads(data)
+        json_data = json.loads(data.decode('utf-8'))
         mode = json_data["mode"]
         if mode == "store":
         	stored_data_file = open("serverDB/data_from_client"+time.strftime('%d_%m_%y-%H%M')+".txt","w")

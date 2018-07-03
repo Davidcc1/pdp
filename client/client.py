@@ -179,9 +179,9 @@ def sendDataToServer(obj):
         response = ''
 
         while True:
-            data = sock.recv(10000)
+            data = sock.recv(1000000)
             response += data
-            if len(data) < 10000:
+            if len(data) < 1000000:
                 break
 
         print >> sys.stderr, 'received "%s"' % response
@@ -218,6 +218,10 @@ def challengeServer(data_string):
         print >>sys.stderr, 'closing socket'
         sock.close()
 
+"""
+initial execution
+"""
+start_time = time.time()
 
 mode = sys.argv[1].split('=')[1]
 
@@ -302,3 +306,6 @@ elif mode == 'challenge':
     else:
         print
         print "DATA SERVER HAS DELETED OR MODIFIED"
+
+
+print "time ->  " + str(time.time()-start_time) + " s"
