@@ -1,5 +1,7 @@
 # README #
 
+Implementation of Scalable and Efficient provable data possession.
+
 Actually server and client are in the same git project.
 
 Server: 
